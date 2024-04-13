@@ -1,0 +1,40 @@
+version: '3.8'
+
+services:
+  weather-app:
+    build: ./
+    command: ./weather
+    ports:
+      - '8070:8080'
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+  db: 
+    restart: always
+    image: postgres:latest
+    volumes:
+      - ./.database/postgres/data:/var/lib/postgresql/data
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: secret
+      POSTGRES_DB: weatherapp
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U postgres" ]
+      interval: 3s
+    ports:
+      - '5431:5432'
+  redis:
+    image: redis:latest
+    container_name: redis
+    command:
+      - /bin/sh
+      - -c
+      - redis-server --requirepass secret
+    healthcheck:
+      test: [ "CMD", "redis-cli", "--raw", "incr", "ping" ]
+    ports:
+      - "6378:6379"
+    volumes:
+      - ./.database/redis:/var/lib/redis/data
